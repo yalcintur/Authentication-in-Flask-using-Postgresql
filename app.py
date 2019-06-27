@@ -2,41 +2,17 @@
 A login signup api
 '''
 #! /usr/bin/env python
-import uuid
-import hashlib
 from flask import Flask
 from flask import request
 from flask_sqlalchemy import SQLAlchemy
+from encrypt import salting_pass, encrypt_pass
+from models import User
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Gumuldur123@localhost/test'
 # for more information https://docs.sqlalchemy.org/en/13/core/engines.html
 
 db = SQLAlchemy(app)
-
-# defining the User model
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(60), unique=True, nullable=False)
-    username = db.Column(db.String(30), unique=True, nullable=False)
-    hsdpassword = db.Column(db.String(128), nullable=False)
-
-    def _init_(self, email, username, password):
-        self.email = email
-        self.username = username
-        self.hsdpassword = hsdpassword
-
-# sh256 - password hashing + 
-def encrypt_pass(hash_string):
-    sha_signature = hashlib.sha256(hash_string.encode()).hexdigest()
-    return sha_signature
-
-# salting 
-def salting_pass(sha_signature):
-    salt = uuid.uuid4().hex
-    salted_signature = sha_signature+':'+salt
-
-    return salted_signature
 
 # routing to signup - if appropriate , creating a new user in database
 @app.route('/signup', methods=['POST', 'GET'])
@@ -93,6 +69,7 @@ def login():
 
         except:
             return 'There has been an error!'
+
 
 if __name__ == "__main__":
     app.run()

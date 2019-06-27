@@ -1,7 +1,7 @@
 import uuid
 import hashlib
 
-# sh256 - password hashing + 
+# sh256 - password hashing
 def encrypt_pass(hash_string):
     sha_signature = hashlib.sha256(hash_string.encode()).hexdigest()
     return sha_signature

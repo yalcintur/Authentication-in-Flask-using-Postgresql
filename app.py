@@ -7,6 +7,7 @@ from flask import request
 from flask_sqlalchemy import SQLAlchemy
 from encrypt import salting_pass, encrypt_pass
 from models import User
+from validation import validate
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Gumuldur123@localhost/test'
@@ -28,11 +29,13 @@ def signup():
         new_email = request.form['email']
         new_username = request.form['username']
         new_password = salting_pass(encrypt_pass(request.form['hsdpassword']))
-        new_user = User(email=new_email, username=new_username, hsdpassword=new_password)
-        db.session.add(new_user)
-        db.session.commit()
-        return 'Data is updated'
-            
+        if User.query.filter_by(email=new_email).count() or User.query.filter_by(username=new_username).count():
+           return 'Error! This username or password is already in use.'
+        else:
+            new_user = User(email=new_email, username=new_username, hsdpassword=new_password)
+            db.session.add(new_user)
+            db.session.commit()
+            return 'Data is updated'
 
 #login - comparing the credentials to the ones in database
 @app.route('/login', methods=['POST', 'GET'])

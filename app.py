@@ -2,13 +2,14 @@
 A login signup api
 '''
 #! /usr/bin/env python
+import uuid
 import hashlib
 from flask import Flask
 from flask import request
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'YOUR DATABASE STRING'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Gumuldur123@localhost/test'
 # for more information https://docs.sqlalchemy.org/en/13/core/engines.html
 
 db = SQLAlchemy(app)
@@ -18,17 +19,24 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(60), unique=True, nullable=False)
     username = db.Column(db.String(30), unique=True, nullable=False)
-    hsdpassword = db.Column(db.String(64), nullable=False)
+    hsdpassword = db.Column(db.String(128), nullable=False)
 
     def _init_(self, email, username, password):
         self.email = email
         self.username = username
         self.hsdpassword = hsdpassword
 
-# sh256 - password hashing
+# sh256 - password hashing + 
 def encrypt_pass(hash_string):
     sha_signature = hashlib.sha256(hash_string.encode()).hexdigest()
     return sha_signature
+
+# salting 
+def salting_pass(sha_signature):
+    salt = uuid.uuid4().hex
+    salted_signature = sha_signature+':'+salt
+
+    return salted_signature
 
 # routing to signup - if appropriate , creating a new user in database
 @app.route('/signup', methods=['POST', 'GET'])
@@ -40,17 +48,15 @@ def signup():
     '''
     if request.method == 'GET':
         return 'You need to post for registering an user'
-    else:
+    elif request.method == 'POST':
         new_email = request.form['email']
         new_username = request.form['username']
-        new_password = encrypt_pass(request.form['hsdpassword'])
+        new_password = salting_pass(encrypt_pass(request.form['hsdpassword']))
         new_user = User(email=new_email, username=new_username, hsdpassword=new_password)
-        try:
-            db.session.add(new_user)
-            db.session.commit()
-            return 'Data is updated'
-        except:
-            return 'There has been an error!'
+        db.session.add(new_user)
+        db.session.commit()
+        return 'Data is updated'
+            
 
 #login - comparing the credentials to the ones in database
 @app.route('/login', methods=['POST', 'GET'])
@@ -63,7 +69,7 @@ def login():
     if request.method == 'GET':
 
         return 'You need to post for logging in an user'
-    else:
+    elif request.method == 'POST':
         # taking in the given credentials
         crd_username = request.form['username']
         crd_password = encrypt_pass(request.form['hsdpassword'])
@@ -75,8 +81,10 @@ def login():
                 # finding the user in database where username in db is crd_username
                 db_user = User.query.filter_by(username=crd_username).first()
 
+                # removing the salt from password
+                _hsdpassword, salt = db_user.hsdpassword.split(':')
                 # comparing the crd_password to db_user's password
-                if db_user.hsdpassword == crd_password:
+                if _hsdpassword == crd_password:
                     return 'Log in successful'
                 else: 
                     return 'Wrong username or password'
